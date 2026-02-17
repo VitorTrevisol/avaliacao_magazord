@@ -140,3 +140,8 @@ FROM pareto_calc
 ORDER BY receita_total DESC
 LIMIT 20;
 ```
+### Observação
+
+O repositório foi mantido público porque o objetivo é a avaliação técnica.
+
+O arquivo `.env` não contém credenciais sensíveis ou dados confidenciais, também sendo mantido, para a reprodutibilidade do ambiente Docker.
