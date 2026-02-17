@@ -1,0 +1,59 @@
+services:
+  mongodb:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: source_mongodb
+    restart: always
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: password123
+      MONGO_INITDB_DATABASE: raw_data
+    ports:
+      - "27017:27017"
+    volumes:
+      - ./data:/data/json_files
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh localhost:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+
+  postgres:
+    image: postgres:17
+    container_name: dest_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: user_analytics
+      POSTGRES_PASSWORD: password123
+      POSTGRES_DB: analytics_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_storage:/var/lib/postgresql/data
+    healthcheck: 
+      test: ["CMD-SHELL", "pg_isready -U user_analytics -d analytics_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  etl_job:
+    build:
+      context: .
+      dockerfile: Dockerfile.app 
+    container_name: etl_runner
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    environment:
+      MONGO_URI: mongodb://admin:password123@source_mongodb:27017/?authSource=admin
+      POSTGRES_URI: postgresql://user_analytics:password123@dest_postgres:5432/analytics_db
+      MONGO_DB: raw_data
+    volumes:
+      - ./src:/app/src
+      - ./main.py:/app/main.py
+
+volumes:
+  postgres_storage:
